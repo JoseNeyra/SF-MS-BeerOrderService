@@ -18,7 +18,7 @@
 package com.joseneyra.beer.order.service.web.mappers;
 
 import com.joseneyra.beer.order.service.domain.BeerOrder;
-import com.joseneyra.beer.order.service.web.model.BeerOrderDto;
+import com.joseneyra.brewery.model.BeerOrderDto;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 

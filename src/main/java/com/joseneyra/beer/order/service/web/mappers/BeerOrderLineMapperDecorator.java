@@ -2,8 +2,8 @@ package com.joseneyra.beer.order.service.web.mappers;
 
 import com.joseneyra.beer.order.service.domain.BeerOrderLine;
 import com.joseneyra.beer.order.service.services.beer.BeerService;
-import com.joseneyra.beer.order.service.web.model.BeerDto;
-import com.joseneyra.beer.order.service.web.model.BeerOrderLineDto;
+import com.joseneyra.brewery.model.BeerDto;
+import com.joseneyra.brewery.model.BeerOrderLineDto;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 
@@ -34,7 +34,7 @@ public abstract class BeerOrderLineMapperDecorator implements BeerOrderLineMappe
             orderLineDto.setBeerName(beerDto.getBeerName());
             orderLineDto.setBeerStyle(beerDto.getBeerStyle());
             orderLineDto.setPrice(beerDto.getPrice());
-            orderLineDto.setBeerId(beerDto.getBeerId());
+            orderLineDto.setBeerId(beerDto.getId());
         });
 
         return orderLineDto;

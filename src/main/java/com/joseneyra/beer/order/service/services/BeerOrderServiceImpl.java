@@ -18,13 +18,13 @@
 package com.joseneyra.beer.order.service.services;
 
 import com.joseneyra.beer.order.service.domain.BeerOrder;
+import com.joseneyra.beer.order.service.domain.BeerOrderStatus;
 import com.joseneyra.beer.order.service.domain.Customer;
-import com.joseneyra.beer.order.service.domain.OrderStatusEnum;
 import com.joseneyra.beer.order.service.repositories.BeerOrderRepository;
 import com.joseneyra.beer.order.service.repositories.CustomerRepository;
 import com.joseneyra.beer.order.service.web.mappers.BeerOrderMapper;
-import com.joseneyra.beer.order.service.web.model.BeerOrderDto;
-import com.joseneyra.beer.order.service.web.model.BeerOrderPagedList;
+import com.joseneyra.brewery.model.BeerOrderDto;
+import com.joseneyra.brewery.model.BeerOrderPagedList;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
@@ -84,7 +84,7 @@ public class BeerOrderServiceImpl implements BeerOrderService {
             BeerOrder beerOrder = beerOrderMapper.dtoToBeerOrder(beerOrderDto);
             beerOrder.setId(null); //should not be set by outside client
             beerOrder.setCustomer(customerOptional.get());
-            beerOrder.setOrderStatus(OrderStatusEnum.NEW);
+            beerOrder.setOrderStatus(BeerOrderStatus.NEW);
 
             beerOrder.getBeerOrderLines().forEach(line -> line.setBeerOrder(beerOrder));
 
@@ -109,7 +109,7 @@ public class BeerOrderServiceImpl implements BeerOrderService {
     @Override
     public void pickupOrder(UUID customerId, UUID orderId) {
         BeerOrder beerOrder = getOrder(customerId, orderId);
-        beerOrder.setOrderStatus(OrderStatusEnum.PICKED_UP);
+        beerOrder.setOrderStatus(BeerOrderStatus.PICKED_UP);
 
         beerOrderRepository.save(beerOrder);
     }

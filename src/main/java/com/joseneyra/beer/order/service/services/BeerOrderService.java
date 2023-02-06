@@ -18,8 +18,8 @@
 package com.joseneyra.beer.order.service.services;
 
 
-import com.joseneyra.beer.order.service.web.model.BeerOrderDto;
-import com.joseneyra.beer.order.service.web.model.BeerOrderPagedList;
+import com.joseneyra.brewery.model.BeerOrderDto;
+import com.joseneyra.brewery.model.BeerOrderPagedList;
 import org.springframework.data.domain.Pageable;
 
 import java.util.UUID;

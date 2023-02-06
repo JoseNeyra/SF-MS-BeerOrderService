@@ -1,6 +1,6 @@
 package com.joseneyra.beer.order.service.services.beer;
 
-import com.joseneyra.beer.order.service.web.model.BeerDto;
+import com.joseneyra.brewery.model.BeerDto;
 
 import java.util.Optional;
 import java.util.UUID;
