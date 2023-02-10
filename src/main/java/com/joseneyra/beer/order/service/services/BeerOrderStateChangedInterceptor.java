@@ -5,6 +5,7 @@ import com.joseneyra.beer.order.service.domain.BeerOrderEvent;
 import com.joseneyra.beer.order.service.domain.BeerOrderStatus;
 import com.joseneyra.beer.order.service.repositories.BeerOrderRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.Message;
 import org.springframework.statemachine.StateMachine;
 import org.springframework.statemachine.state.State;
@@ -16,6 +17,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @RequiredArgsConstructor
+@Slf4j
 @Service
 public class BeerOrderStateChangedInterceptor extends StateMachineInterceptorAdapter<BeerOrderStatus, BeerOrderEvent> {
 
@@ -28,11 +30,15 @@ public class BeerOrderStateChangedInterceptor extends StateMachineInterceptorAda
     public void preStateChange(State<BeerOrderStatus, BeerOrderEvent> state, Message<BeerOrderEvent> message,
                                Transition<BeerOrderStatus, BeerOrderEvent> transition,
                                StateMachine<BeerOrderStatus, BeerOrderEvent> stateMachine) {
-        Optional.ofNullable(message).flatMap(msg -> Optional.ofNullable((UUID) msg.getHeaders().getOrDefault(BeerOrderServiceImpl.BEER_ORDER_ID_HEADER, -1L)))
+        Optional.ofNullable(message)
+                .flatMap(msg -> Optional.ofNullable((String) msg.getHeaders().getOrDefault(BeerOrderManagerImpl.BEER_ORDER_ID_HEADER, " ")))
                 .ifPresent(beerOrderId -> {
-                    BeerOrder beerOrder = beerOrderRepository.getReferenceById(beerOrderId);
+                    log.debug("Saving state for order id: " + beerOrderId + " Status: " + state.getId());
+
+                    BeerOrder beerOrder = beerOrderRepository.getReferenceById(UUID.fromString(beerOrderId));
                     beerOrder.setOrderStatus(state.getId());
-                    beerOrderRepository.save(beerOrder);
+                    beerOrderRepository.saveAndFlush(beerOrder);        // Usually spring data jpa and hibernate do lazy writes,
+                                                                        // saveAndFlush forces hibernate to persist the object right away
                 });
     }
 }

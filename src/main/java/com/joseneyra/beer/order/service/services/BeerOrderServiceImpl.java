@@ -41,8 +41,6 @@ import java.util.stream.Collectors;
 @Service
 public class BeerOrderServiceImpl implements BeerOrderService {
 
-    public static final String BEER_ORDER_ID_HEADER = "beer_order_id";
-
     private final BeerOrderRepository beerOrderRepository;
     private final CustomerRepository customerRepository;
     private final BeerOrderMapper beerOrderMapper;
