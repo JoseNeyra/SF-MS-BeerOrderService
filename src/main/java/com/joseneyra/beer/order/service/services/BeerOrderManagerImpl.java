@@ -40,12 +40,17 @@ public class BeerOrderManagerImpl implements BeerOrderManager {
 
     @Override
     public void processValidationResult(UUID beerOrderId, Boolean isValid) {
-        BeerOrder beerOrder = beerOrderRepository.getOne(beerOrderId);
+        BeerOrder beerOrder = beerOrderRepository.findOneById(beerOrderId);
 
         if(isValid) {
-            sendBeerOrderEvent(beerOrder, BeerOrderEvent.VALIDATION_PASSED);
+            sendBeerOrderEvent(beerOrder, BeerOrderEvent.VALIDATION_PASSED);        // NOTE: The beer order object becomes stale when sending
+
+            // Refreshing the stale beerOrderObject to make hibernate happy
+            BeerOrder validatedOrder = beerOrderRepository.findOneById(beerOrderId);
+            sendBeerOrderEvent(validatedOrder, BeerOrderEvent.VALIDATE_ORDER);
+
         } else {
-            sendBeerOrderEvent(beerOrder, BeerOrderEvent.VALIDATION_FAILED);
+            sendBeerOrderEvent(beerOrder, BeerOrderEvent.ALLOCATE_ORDER);
         }
     }
 
