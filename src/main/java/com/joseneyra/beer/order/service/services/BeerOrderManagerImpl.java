@@ -4,6 +4,7 @@ import com.joseneyra.beer.order.service.domain.BeerOrder;
 import com.joseneyra.beer.order.service.domain.BeerOrderEvent;
 import com.joseneyra.beer.order.service.domain.BeerOrderStatus;
 import com.joseneyra.beer.order.service.repositories.BeerOrderRepository;
+import com.joseneyra.brewery.model.BeerOrderDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.support.MessageBuilder;
@@ -52,6 +53,38 @@ public class BeerOrderManagerImpl implements BeerOrderManager {
         } else {
             sendBeerOrderEvent(beerOrder, BeerOrderEvent.ALLOCATE_ORDER);
         }
+    }
+
+    @Override
+    public void beerOrderAllocationPassed(BeerOrderDto beerOrderDto) {
+        BeerOrder beerOrder = beerOrderRepository.getReferenceById(beerOrderDto.getId());
+        sendBeerOrderEvent(beerOrder, BeerOrderEvent.ALLOCATION_SUCCESS);
+        updateAllocatedQty(beerOrderDto, beerOrder);
+    }
+
+    @Override
+    public void beerOrderAllocationPendingInventory(BeerOrderDto beerOrderDto) {
+        BeerOrder beerOrder = beerOrderRepository.getReferenceById(beerOrderDto.getId());
+        sendBeerOrderEvent(beerOrder, BeerOrderEvent.ALLOCATION_NO_INVENTORY);
+        updateAllocatedQty(beerOrderDto, beerOrder);
+    }
+
+    @Override
+    public void beerOrderAllocationFailed(BeerOrderDto beerOrderDto) {
+        BeerOrder beerOrder = beerOrderRepository.getReferenceById(beerOrderDto.getId());
+        sendBeerOrderEvent(beerOrder, BeerOrderEvent.ALLOCATION_FAILED);
+    }
+
+    private void updateAllocatedQty(BeerOrderDto beerOrderDto, BeerOrder beerOrder) {
+        BeerOrder allocatedOrder = beerOrderRepository.getReferenceById(beerOrderDto.getId());
+
+        allocatedOrder.getBeerOrderLines().forEach(beerOrderLine -> {
+            beerOrderDto.getBeerOrderLines().forEach(beerOrderLineDto -> {
+                if (beerOrderLine.getId().equals(beerOrderLineDto.getId())) {
+                    beerOrderLine.setQuantityAllocated(beerOrderLineDto.getQuantityAllocated());
+                }
+            });
+        });
     }
 
     private void sendBeerOrderEvent(BeerOrder beerOrder, BeerOrderEvent event) {
