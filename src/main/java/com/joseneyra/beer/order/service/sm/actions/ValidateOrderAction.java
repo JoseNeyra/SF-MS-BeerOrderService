@@ -17,6 +17,7 @@ import org.springframework.statemachine.action.Action;
 import org.springframework.stereotype.Component;
 
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 
 @Slf4j
@@ -36,13 +37,15 @@ public class ValidateOrderAction implements Action<BeerOrderStatus, BeerOrderEve
         String beerOrderId = Objects.requireNonNull(context.getMessage().getHeaders().get(BeerOrderManagerImpl.BEER_ORDER_ID_HEADER)).toString();
 
         // Get the beerOrder from the repository
-        BeerOrder beerOrder = beerOrderRepository.findOneById(UUID.fromString(beerOrderId));
+        Optional<BeerOrder> beerOrderOptional = beerOrderRepository.findById(UUID.fromString(beerOrderId));
 
-        // Convert to DTO
-        BeerOrderDto beerOrderDto = beerOrderMapper.beerOrderToDto(beerOrder);
+        beerOrderOptional.ifPresentOrElse( beerOrder -> {
+            // Convert to DTO
+            BeerOrderDto beerOrderDto = beerOrderMapper.beerOrderToDto(beerOrder);
 
-        messagingService.sendMessage(ValidateBeerOrderRequest.builder()
-                .beerOrderDto(beerOrderDto).build()
-                , JmsConfig.VALIDATE_ORDER_QUEUE);
+            messagingService.sendMessage(ValidateBeerOrderRequest.builder()
+                            .beerOrderDto(beerOrderDto).build()
+                    , JmsConfig.VALIDATE_ORDER_QUEUE);
+        }, () -> log.error("Beer Order Not Found, beerOrderId: " + beerOrderId));
     }
 }

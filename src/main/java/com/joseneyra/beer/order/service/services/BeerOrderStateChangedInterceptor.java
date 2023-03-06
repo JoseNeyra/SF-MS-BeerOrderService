@@ -12,6 +12,7 @@ import org.springframework.statemachine.state.State;
 import org.springframework.statemachine.support.StateMachineInterceptorAdapter;
 import org.springframework.statemachine.transition.Transition;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -27,9 +28,12 @@ public class BeerOrderStateChangedInterceptor extends StateMachineInterceptorAda
     // gets the headers from the message, then gets the beerOrderId, and stores the beerOrder with its state
     // in the db
 
+    @Transactional
     public void preStateChange(State<BeerOrderStatus, BeerOrderEvent> state, Message<BeerOrderEvent> message,
                                Transition<BeerOrderStatus, BeerOrderEvent> transition,
                                StateMachine<BeerOrderStatus, BeerOrderEvent> stateMachine) {
+        log.debug("Pre-State Change");
+
         Optional.ofNullable(message)
                 .flatMap(msg -> Optional.ofNullable((String) msg.getHeaders().getOrDefault(BeerOrderManagerImpl.BEER_ORDER_ID_HEADER, " ")))
                 .ifPresent(beerOrderId -> {
