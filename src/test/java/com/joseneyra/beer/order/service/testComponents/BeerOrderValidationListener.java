@@ -32,8 +32,6 @@ public class BeerOrderValidationListener {
             }
         }
 
-        System.out.println("############ VALIDATION LISTENER RAN ############");
-
         if (sendResponse) {
             jmsTemplate.convertAndSend(JmsConfig.VALIDATE_ORDER_RESPONSE_QUEUE,
                     ValidateOrderResult.builder()
