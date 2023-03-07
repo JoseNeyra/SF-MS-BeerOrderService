@@ -17,6 +17,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 
 @Slf4j
@@ -29,6 +31,7 @@ public class BeerOrderManagerImpl implements BeerOrderManager {
     private final StateMachineFactory<BeerOrderStatus, BeerOrderEvent> stateMachineFactory;
     private final BeerOrderRepository beerOrderRepository;
     private final BeerOrderStateChangedInterceptor beerOrderStateChangedInterceptor;
+//    private final EntityManager entityManager;
 
     @Transactional
     @Override
@@ -47,12 +50,19 @@ public class BeerOrderManagerImpl implements BeerOrderManager {
     public void processValidationResult(UUID beerOrderId, Boolean isValid) {
         log.debug("Process Validation Result for beerOrderId: " + beerOrderId + " Valid? " + isValid);
 
+        // The following forces a flush on the entities to the database before we start getting values from it,
+        // not needed at this time, but you may need it for your application.
+//        entityManager.flush();
+
         Optional<BeerOrder> beerOrderOptional = beerOrderRepository.findById(beerOrderId);
 
         beerOrderOptional.ifPresentOrElse(beerOrder -> {
             if(isValid) {
                 // NOTE: The beer order object becomes stale when sending
                 sendBeerOrderEvent(beerOrder, BeerOrderEvent.VALIDATION_PASSED);
+
+                // Wait for the Status in the Database to Change
+                awaitForStateChange(beerOrderId, BeerOrderStatus.VALIDATED);
 
                 // Refreshing the stale beerOrderObject to make hibernate happy
                 BeerOrder validatedOrder = beerOrderRepository.findById(beerOrderId).get();
@@ -70,6 +80,10 @@ public class BeerOrderManagerImpl implements BeerOrderManager {
 
         beerOrderOptional.ifPresentOrElse(beerOrder -> {
             sendBeerOrderEvent(beerOrder, BeerOrderEvent.ALLOCATION_SUCCESS);
+
+            // Wait for the Status in the Database to Change
+            awaitForStateChange(beerOrder.getId(), BeerOrderStatus.ALLOCATED);
+
             updateAllocatedQty(beerOrderDto);
         }, () -> log.error("Order Not Found. Id: " + beerOrderDto.getId()));
     }
@@ -81,6 +95,10 @@ public class BeerOrderManagerImpl implements BeerOrderManager {
 
         beerOrderOptional.ifPresentOrElse(beerOrder -> {
             sendBeerOrderEvent(beerOrder, BeerOrderEvent.ALLOCATION_NO_INVENTORY);
+
+            // Wait for the Status in the Database to Change
+            awaitForStateChange(beerOrder.getId(), BeerOrderStatus.PENDING_INVENTORY);
+
             updateAllocatedQty(beerOrderDto);
         }, () -> log.error("Order Not Found. Id: " + beerOrderDto.getId()));
 
@@ -93,16 +111,37 @@ public class BeerOrderManagerImpl implements BeerOrderManager {
 
         beerOrderOptional.ifPresentOrElse(beerOrder -> {
             sendBeerOrderEvent(beerOrder, BeerOrderEvent.ALLOCATION_FAILED);
+
+            // Wait for the Status in the Database to Change
+            awaitForStateChange(beerOrder.getId(), BeerOrderStatus.ALLOCATION_EXCEPTION);
+
         }, () -> log.error("Order Not Found. Id: " + beerOrderDto.getId()));
     }
 
     @Override
-    public void beerOrderPickedUp(UUID id) {
-        Optional<BeerOrder> beerOrderOptional = beerOrderRepository.findById(id);
+    public void beerOrderPickedUp(UUID beerOrderId) {
+        Optional<BeerOrder> beerOrderOptional = beerOrderRepository.findById(beerOrderId);
 
         beerOrderOptional.ifPresentOrElse(beerOrder -> {
             sendBeerOrderEvent(beerOrder, BeerOrderEvent.BEER_ORDER_PICKED_UP);
-        }, () -> log.error("Order Not Found. Id: " + id));
+
+            // Wait for the Status in the Database to Change
+            awaitForStateChange(beerOrder.getId(), BeerOrderStatus.PICKED_UP);
+
+        }, () -> log.error("Order Not Found. Id: " + beerOrderId));
+    }
+
+    @Override
+    public void cancelOrder(UUID beerOrderId) {
+        Optional<BeerOrder> beerOrderOptional = beerOrderRepository.findById(beerOrderId);
+
+        beerOrderOptional.ifPresentOrElse(beerOrder -> {
+            sendBeerOrderEvent(beerOrder, BeerOrderEvent.CANCEL_ORDER);
+
+            // Wait for the Status in the Database to Change
+            awaitForStateChange(beerOrder.getId(), BeerOrderStatus.CANCELLED);
+
+        }, () -> log.error("Order Not Found. Id: " + beerOrderId));
     }
 
     private void updateAllocatedQty(BeerOrderDto beerOrderDto) {
@@ -128,6 +167,40 @@ public class BeerOrderManagerImpl implements BeerOrderManager {
                 .build();
 
         sm.sendEvent(msg);
+    }
+
+    // Waiting for State Machine Status to be persisted in to the DB
+    // Todo: Explore Spring State Machine options for waiting for persistence
+    private void awaitForStateChange(UUID beerOrderId, BeerOrderStatus beerOrderStatus) {
+        AtomicBoolean found = new AtomicBoolean(false);
+        AtomicInteger loopCount = new AtomicInteger(0);
+
+        while (!found.get()) {
+            if (loopCount.incrementAndGet() > 10) {
+                found.set(true);
+                log.debug("Loop Retries Exceeded");
+            }
+
+            beerOrderRepository.findById(beerOrderId).ifPresentOrElse(beerOrder -> {
+                if (beerOrder.getOrderStatus().equals(beerOrderStatus)) {
+                    found.set(true);
+                    log.debug("Order Found");
+                } else {
+                    log.debug("Order Status Not Equal. ExpectedL " + beerOrderStatus.name() + " Found: " + beerOrder.getOrderStatus().name() + " instead");
+                }
+            }, () -> {
+                log.debug("Order ID Not Found");
+            });
+
+            if (!found.get()) {
+                try {
+                    log.debug("Sleeping for retry");
+                    Thread.sleep(100);
+                } catch (Exception e) {
+                    // do nothing
+                }
+            }
+        }
     }
 
     private StateMachine<BeerOrderStatus, BeerOrderEvent> build(BeerOrder beerOrder) {
