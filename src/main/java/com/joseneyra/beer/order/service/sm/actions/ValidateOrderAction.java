@@ -40,8 +40,10 @@ public class ValidateOrderAction implements Action<BeerOrderStatus, BeerOrderEve
         Optional<BeerOrder> beerOrderOptional = beerOrderRepository.findById(UUID.fromString(beerOrderId));
 
         beerOrderOptional.ifPresentOrElse( beerOrder -> {
+            log.debug("BeerOrder Found");
             // Convert to DTO
             BeerOrderDto beerOrderDto = beerOrderMapper.beerOrderToDto(beerOrder);
+            log.debug("BeerOrderDTO Mapped Successfully");
 
             messagingService.sendMessage(ValidateBeerOrderRequest.builder()
                             .beerOrderDto(beerOrderDto).build()

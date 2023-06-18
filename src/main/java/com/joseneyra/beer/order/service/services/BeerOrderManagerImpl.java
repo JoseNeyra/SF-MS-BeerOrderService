@@ -15,6 +15,7 @@ import org.springframework.statemachine.support.DefaultStateMachineContext;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.persistence.EntityManager;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -31,7 +32,7 @@ public class BeerOrderManagerImpl implements BeerOrderManager {
     private final StateMachineFactory<BeerOrderStatus, BeerOrderEvent> stateMachineFactory;
     private final BeerOrderRepository beerOrderRepository;
     private final BeerOrderStateChangedInterceptor beerOrderStateChangedInterceptor;
-//    private final EntityManager entityManager;
+    private final EntityManager entityManager;
 
     @Transactional
     @Override
@@ -52,12 +53,12 @@ public class BeerOrderManagerImpl implements BeerOrderManager {
 
         // The following forces a flush on the entities to the database before we start getting values from it,
         // not needed at this time, but you may need it for your application.
-//        entityManager.flush();
+        entityManager.flush();
 
         Optional<BeerOrder> beerOrderOptional = beerOrderRepository.findById(beerOrderId);
 
         beerOrderOptional.ifPresentOrElse(beerOrder -> {
-            if(isValid) {
+            if( isValid) {
                 // NOTE: The beer order object becomes stale when sending
                 sendBeerOrderEvent(beerOrder, BeerOrderEvent.VALIDATION_PASSED);
 

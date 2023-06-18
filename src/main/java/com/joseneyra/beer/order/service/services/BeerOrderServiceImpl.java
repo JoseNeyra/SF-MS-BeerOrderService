@@ -80,8 +80,8 @@ public class BeerOrderServiceImpl implements BeerOrderService {
             beerOrder.setOrderStatus(BeerOrderStatus.NEW);
 
             beerOrder.getBeerOrderLines().forEach(line -> line.setBeerOrder(beerOrder));
-
             BeerOrder savedBeerOrder = beerOrderManager.newBeerOrder(beerOrder);
+            beerOrderRepository.flush();
 
             log.debug("Saved Beer Order: " + beerOrder.getId());
 
@@ -100,6 +100,7 @@ public class BeerOrderServiceImpl implements BeerOrderService {
     @Override
     public void pickupOrder(UUID customerId, UUID orderId) {
         beerOrderManager.beerOrderPickedUp(orderId);
+        beerOrderRepository.flush();
     }
 
     private BeerOrder getOrder(UUID customerId, UUID orderId){
