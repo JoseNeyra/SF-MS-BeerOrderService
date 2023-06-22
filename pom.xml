@@ -21,6 +21,12 @@
             <version>3.2.0</version>
         </dependency>
 
+        <!-- Config Client -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-config</artifactId>
+        </dependency>
+
         <!-- Eureka Service -->
         <dependency>
             <groupId>org.springframework.cloud</groupId>
